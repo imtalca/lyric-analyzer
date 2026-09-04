@@ -43,7 +43,6 @@ def extract_phonetic_data(lyrics: str) -> str:
     # Get the raw phonemes for those words
     phonetic_context = "Phonetic Data for End Words:\n"
     for word in end_words:
-        # pronouncing.phones_for_word() returns a list of phonetic spellings
         phones = pronouncing.phones_for_word(word)
         phoneme_str = phones[0] if phones else "Unknown"
         phonetic_context += f"- {word}: {phoneme_str}\n"
@@ -53,12 +52,10 @@ def extract_phonetic_data(lyrics: str) -> str:
 def analyze_lyrics(lyrics: str) -> LyricAnalysis:
     print("Extracting phonetic structures...")
     
-    # 1. Run your programmatic Python function first
     phonetic_data = extract_phonetic_data(lyrics)
     
     print("Analyzing lyrics... (this takes about 5-10 seconds)\n")
     
-    # 2. Inject BOTH the lyrics and the phonetic data into the prompt
     response = client.chat.completions.create(
         model="gpt-4o-mini", 
         response_model=LyricAnalysis,
