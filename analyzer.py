@@ -3,8 +3,21 @@ import instructor
 from pydantic import BaseModel, Field
 from openai import OpenAI
 from dotenv import load_dotenv
+import streamlit as st  # We import streamlit safely here just in case
 
 load_dotenv()
+
+api_key = None
+try:
+    if "OPENAI_API_KEY" in st.secrets:
+        api_key = st.secrets["OPENAI_API_KEY"]
+except Exception:
+    pass
+
+if not api_key:
+    api_key = os.getenv("OPENAI_API_KEY")
+
+client = instructor.from_openai(OpenAI(api_key=api_key))
 
 class LyricAnalysis(BaseModel):
     syntactic_breakdown: str = Field(
