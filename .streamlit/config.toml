@@ -1,0 +1,6 @@
+[theme]
+# This changes the active border, buttons, and loading spinners
+primaryColor = "#A9BEDA" 
+
+# Optional: Force a dark or light theme (Streamlit guesses by default)
+base = "dark"
