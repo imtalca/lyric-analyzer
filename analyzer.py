@@ -1,11 +1,18 @@
 import os
+import string
+
 import instructor
+import pronouncing
 from pydantic import BaseModel, Field
 from openai import OpenAI
 from dotenv import load_dotenv
 import streamlit as st  # We import streamlit safely here just in case
 
 load_dotenv()
+
+# Cost guardrails: cap request/response size so a single call can't blow up the bill.
+MAX_LYRICS_CHARS = 6000
+MAX_OUTPUT_TOKENS = 2000
 
 api_key = None
 try:
@@ -36,10 +43,6 @@ class LyricAnalysis(BaseModel):
         description="A concise synthesis of the emotional pivot or conceptual realization in the song."
     )
 
-client = instructor.from_openai(OpenAI())
-
-import string
-import pronouncing
 
 def extract_phonetic_data(lyrics: str) -> str:
     """Extracts end-words and their phonetic translation for the LLM."""
@@ -62,16 +65,27 @@ def extract_phonetic_data(lyrics: str) -> str:
         
     return phonetic_context
 
+@st.cache_data(show_spinner=False, ttl=3600, max_entries=200)
 def analyze_lyrics(lyrics: str) -> LyricAnalysis:
+    lyrics = (lyrics or "").strip()
+    if not lyrics:
+        raise ValueError("No lyrics provided.")
+    if len(lyrics) > MAX_LYRICS_CHARS:
+        raise ValueError(
+            f"Lyrics are too long ({len(lyrics)} chars). Limit is {MAX_LYRICS_CHARS}."
+        )
+
     print("Extracting phonetic structures...")
-    
+
     phonetic_data = extract_phonetic_data(lyrics)
-    
+
     print("Analyzing lyrics... (this takes about 5-10 seconds)\n")
-    
+
     response = client.chat.completions.create(
-        model="gpt-4o-mini", 
+        model="gpt-4o-mini",
         response_model=LyricAnalysis,
+        max_tokens=MAX_OUTPUT_TOKENS,
+        max_retries=2,
         messages=[
             {
                 "role": "system",
