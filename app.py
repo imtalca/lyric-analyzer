@@ -70,6 +70,7 @@ hide_st_style = """
             .stApp {
                 background: linear-gradient(135deg, #1f1147 0%, #4a2a8c 35%, #a1327a 70%, #e2683a 100%);
                 background-attachment: fixed;
+                overflow-x: hidden;
             }
             /* Panels get a translucent dark card so text stays readable over the gradient */
             [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"],
@@ -81,6 +82,13 @@ hide_st_style = """
                 background-color: rgba(15, 10, 35, 0.35);
                 border-radius: 8px;
                 padding: 4px;
+                flex-wrap: wrap;
+            }
+            /* Long unbroken tokens (e.g. a rhyme-scheme string like AABBCCDD) would
+               otherwise overflow the card instead of wrapping to the next line. */
+            [data-testid="stMarkdownContainer"], .stTabs [data-baseweb="tab-panel"] {
+                overflow-wrap: anywhere;
+                word-break: break-word;
             }
             h1, h2, h3, p, label, .stMarkdown {
                 color: #f5f0ff;
