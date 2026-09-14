@@ -70,7 +70,18 @@ hide_st_style = """
             .stApp {
                 background: linear-gradient(135deg, #1f1147 0%, #4a2a8c 35%, #a1327a 70%, #e2683a 100%);
                 background-attachment: fixed;
-                overflow-x: hidden;
+            }
+            /* Below ~900px, stack the two columns instead of squeezing them
+               side-by-side, which is what forced content to overflow/clip. */
+            @media (max-width: 900px) {
+                [data-testid="stHorizontalBlock"] {
+                    flex-direction: column !important;
+                }
+                [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+                    width: 100% !important;
+                    flex: 1 1 100% !important;
+                    min-width: 100% !important;
+                }
             }
             /* Panels get a translucent dark card so text stays readable over the gradient */
             [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"],
@@ -92,6 +103,15 @@ hide_st_style = """
             }
             h1, h2, h3, p, label, .stMarkdown {
                 color: #f5f0ff;
+                overflow-wrap: break-word;
+                word-break: break-word;
+            }
+            /* Make sure the main content area actually shrinks to the window
+               width instead of keeping a wide-layout minimum that overflows. */
+            .main .block-container, [data-testid="stAppViewContainer"] {
+                max-width: 100% !important;
+                width: 100% !important;
+                box-sizing: border-box;
             }
             /* Make the button look sleeker */
             .stButton>button {
