@@ -12,7 +12,7 @@ load_dotenv()
 
 # Cost guardrails: cap request/response size so a single call can't blow up the bill.
 MAX_LYRICS_CHARS = 6000
-MAX_OUTPUT_TOKENS = 2000
+MAX_OUTPUT_TOKENS = 3200
 
 api_key = None
 try:
@@ -28,19 +28,55 @@ client = instructor.from_openai(OpenAI(api_key=api_key))
 
 class LyricAnalysis(BaseModel):
     syntactic_breakdown: str = Field(
-        description="Analysis of line breaks, pacing, subordination, and how syntax shifts create tension."
+        description=(
+            "A detailed, multi-paragraph analysis of sentence structure: line breaks vs. clause "
+            "boundaries (enjambment vs. end-stopping), coordination vs. subordination, ellipsis, "
+            "word order inversions, and how each shift in syntax speeds up, slows down, or adds "
+            "tension to the delivery. Quote specific lines as evidence."
+        )
     )
     metaphor_map: str = Field(
-        description="Tracking core motifs and identifying how physical imagery transforms into emotional states."
+        description=(
+            "A detailed semantic analysis: trace the core motifs and conceptual metaphors across "
+            "the song, map the semantic fields in play (e.g., nature, decay, distance), explain "
+            "lexical connotation and polysemy where relevant, and show precisely how concrete/"
+            "physical imagery is mapped onto abstract emotional states. Quote specific lines as "
+            "evidence."
+        )
     )
     rhyme_scheme: str = Field(
-        description="The strict end-rhyme scheme notation for each stanza (e.g., Verse 1: AABB, Chorus: ABAB) based strictly on the provided Phonetic Data. Explain briefly how this specific form drives the momentum."
+        description=(
+            "The strict end-rhyme scheme notation for each stanza (e.g., Verse 1: AABB, Chorus: "
+            "ABAB) based strictly on the provided Phonetic Data, including any slant/near rhymes "
+            "and their phonetic distance (shared vowel vs. shared coda). Explain in detail how "
+            "this specific form drives momentum, mirrors the song's structure, and sets up or "
+            "subverts listener expectation."
+        )
     )
     phonetic_texture: str = Field(
-        description="Highlights of assonance, alliteration, and how vowel sounds affect the heaviness of lines."
+        description=(
+            "A detailed phonetic/phonological analysis: assonance, consonance, and alliteration "
+            "patterns; vowel height/backness and how it affects the perceived weight or brightness "
+            "of a line; stress and meter (where syllables fall on strong vs. weak beats); and any "
+            "sound symbolism (e.g., plosives for abruptness, sibilants for hushed tone). Cite the "
+            "actual phonemes or words involved."
+        )
+    )
+    pragmatic_analysis: str = Field(
+        description=(
+            "A detailed pragmatic analysis: who is the implied speaker addressing (self, a lover, "
+            "the listener), what speech acts are being performed (assertion, question, command, "
+            "confession), what is implicated but not literally said (conversational implicature, "
+            "presupposition), and how register, tone, and deixis (I/you/we, here/now) shift across "
+            "the song to reposition the relationship between speaker and addressee."
+        )
     )
     narrative_arc: str = Field(
-        description="A concise synthesis of the emotional pivot or conceptual realization in the song."
+        description=(
+            "A thorough synthesis of the song's emotional and conceptual arc: the starting "
+            "situation, the turning point, and the resolution or lack thereof, drawing explicit "
+            "connections back to the syntactic, semantic, phonetic, and pragmatic patterns above."
+        )
     )
 
 
@@ -89,7 +125,15 @@ def analyze_lyrics(lyrics: str) -> LyricAnalysis:
         messages=[
             {
                 "role": "system",
-                "content": "You are an expert computational linguist. Analyze the provided lyrics deeply. Use the provided Phonetic Data to accurately identify end-rhyme schemes (e.g., AABB, ABAB), slant rhymes, and internal assonance."
+                "content": (
+                    "You are an expert computational linguist specializing in phonetics, semantics, "
+                    "and pragmatics. Analyze the provided lyrics deeply and in detail, writing "
+                    "multiple full sentences per field rather than short summaries. Use the provided "
+                    "Phonetic Data to accurately identify end-rhyme schemes (e.g., AABB, ABAB), slant "
+                    "rhymes, and internal assonance. Ground every claim in specific quoted words or "
+                    "lines from the lyrics, and explicitly reason at the phonetic (sound), semantic "
+                    "(meaning), and pragmatic (context/use/implicature) levels of analysis."
+                )
             },
             {
                 "role": "user",
@@ -156,3 +200,6 @@ Now our stems are intertwined
 
     print("\n--- RHYME SCHEME & FORM ---")
     print(analysis.rhyme_scheme)
+
+    print("\n--- PRAGMATIC ANALYSIS ---")
+    print(analysis.pragmatic_analysis)

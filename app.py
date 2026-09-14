@@ -66,6 +66,25 @@ hide_st_style = """
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
             header {visibility: hidden;}
+            /* Gradient backdrop for the whole app */
+            .stApp {
+                background: linear-gradient(135deg, #1f1147 0%, #4a2a8c 35%, #a1327a 70%, #e2683a 100%);
+                background-attachment: fixed;
+            }
+            /* Panels get a translucent dark card so text stays readable over the gradient */
+            [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"],
+            .stTextArea textarea, .stTabs {
+                background-color: rgba(15, 10, 35, 0.35);
+                border-radius: 12px;
+            }
+            .stTabs [data-baseweb="tab-list"] {
+                background-color: rgba(15, 10, 35, 0.35);
+                border-radius: 8px;
+                padding: 4px;
+            }
+            h1, h2, h3, p, label, .stMarkdown {
+                color: #f5f0ff;
+            }
             /* Make the button look sleeker */
             .stButton>button {
                 border-radius: 8px;
@@ -77,7 +96,7 @@ st.markdown(hide_st_style, unsafe_allow_html=True)
 
 # 3. App Header
 st.title("AI Lyric Analyzer")
-st.markdown("A computational linguistics engine that extracts phonetic structures, rhyme schemes, and deep semantic metaphors from your lyrics.")
+st.markdown("A linguistic engine that extracts phonetic structures, rhyme schemes, and deep semantic metaphors from your lyrics.")
 st.divider()
 
 # 4. Create a Two-Column Layout
@@ -119,11 +138,12 @@ with col2:
                 st.stop()
 
             # 5. Use Interactive Tabs for a clean, compact UI
-            tab_form, tab_sonic, tab_syntax, tab_meta, tab_arc = st.tabs([
+            tab_form, tab_sonic, tab_syntax, tab_meta, tab_prag, tab_arc = st.tabs([
                 "Form & Scheme",
                 "Sonic Texture",
                 "Syntax",
                 "Metaphors",
+                "Pragmatics",
                 "Narrative"
             ])
 
@@ -135,6 +155,8 @@ with col2:
                 st.write(analysis.syntactic_breakdown)
             with tab_meta:
                 st.write(analysis.metaphor_map)
+            with tab_prag:
+                st.write(analysis.pragmatic_analysis)
             with tab_arc:
                 st.write(analysis.narrative_arc)
     else:
