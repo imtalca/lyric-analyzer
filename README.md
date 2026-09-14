@@ -21,13 +21,13 @@ By combining traditional phonetic parsing with structured Large Language Model o
 ## Architecture & Technical Stack
 
 The application relies on a hybrid pipeline architecture:
-1. **Deterministic Phonetic Parsing (`pronouncing` + Python):** Before touching an LLM, the backend isolates end-words, strips punctuation, and maps them directly to the CMU Pronouncing Dictionary to extract raw ARPAbet phonemes.
+1. **Deterministic Phonetic Parsing (`pronouncing` + Python):** Before touching an LLM, the backend isolates end-words, strips punctuation, maps them to the CMU Pronouncing Dictionary, and converts the resulting ARPAbet phonemes into standard IPA notation (e.g., `/ˈkreɪzi/`) with correct syllable-level stress placement.
 2. **Structured Data Validation (`Pydantic` + `Instructor`):** Enforces strict JSON data serialization, preventing conversational bloat and forcing the model into specific analytical pillars.
 3. **Interactive Dashboard (`Streamlit`):** A responsive, multi-column dashboard featuring a custom gradient theme and tabbed navigation.
 
 ### Tech Stack:
 * **Core Language:** Python
-* **NLP & Linguistics:** `pronouncing`, `string` tokenization, phonetic ARPAbet mapping
+* **NLP & Linguistics:** `pronouncing`, `string` tokenization, ARPAbet-to-IPA phonetic conversion
 * **AI & Validation:** OpenAI API (`gpt-4o-mini`), `instructor`, `Pydantic`
 * **Frontend Dashboard:** Streamlit
 * **Environment & Security:** `python-dotenv`, Git, Streamlit Cloud
@@ -35,13 +35,13 @@ The application relies on a hybrid pipeline architecture:
 ---
 
 ## Analytical Pillars
-The engine evaluates text across six distinct linguistic axes, spanning phonetics, semantics, and pragmatics:
-* **Form & Rhyme Scheme:** Strict end-rhyme notations (e.g., AABB, ABAB) backed by phonetic dictionary data, including slant rhymes and their phonetic distance.
-* **Sonic & Phonetic Texture:** Assonance, consonance, alliteration, vowel weight, stress/meter, and sound symbolism.
-* **Syntactic Breakdown:** Line breaks vs. clause boundaries, coordination/subordination, ellipsis, and how syntax shifts pacing and tension.
-* **Metaphor Map (Semantics):** Semantic fields, lexical connotation, and how concrete imagery maps onto abstract emotional states.
-* **Pragmatics:** Speech acts, implicature, deixis, and how register and the speaker/addressee relationship shift across the song.
-* **Narrative Arc:** Synthesizing the core emotional pivot or realization of the song, tying the other five pillars together.
+The engine evaluates text across six tabs, each a distinct level of linguistic analysis, returned as a short, direct paragraph grounded in quoted lines from the lyrics and IPA-notated sounds (e.g., `/eɪ/`) rather than raw ARPAbet codes:
+* **Form:** Strict end-rhyme notation (e.g., AABB, ABAB) backed by phonetic dictionary data, including slant rhymes, plus how the form drives momentum or expectation.
+* **Phonetics:** Assonance, consonance, alliteration, and stress/meter patterns, and the effect they create (weight, softness, tension).
+* **Syntax:** Line breaks vs. clause boundaries, coordination/subordination, ellipsis, and how sentence structure shapes pacing and tension.
+* **Semantics:** Core motifs and conceptual metaphors, and how concrete imagery maps onto abstract emotional states.
+* **Pragmatics:** Who the speaker is addressing, the dominant speech act (assertion, question, command, confession), and what's implied but not stated outright.
+* **Synthesis:** The song's starting situation, turning point, and resolution (or lack thereof), tying the other five pillars together into its overall meaning.
 
 ---
 
