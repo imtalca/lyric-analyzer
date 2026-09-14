@@ -68,7 +68,7 @@ If you want to run or test this project locally on your machine:
    ```
    OPENAI_API_KEY=your_key_here
    ```
-   > **Don't have a key?** If you're testing this project and don't want to set up your own OpenAI API key, contact me at liza.mamalat@gmail.com and I can share one or run an analysis for you.
+   > **Don't have a key?** If you're testing this project and don't want to set up your own OpenAI API key, contact me at contact@talcamusic.com and I can share one or run an analysis for you.
 
 4. **Run the app:**
    ```bash
