@@ -1,6 +1,8 @@
 # AI Lyric Analyzer 🎵
 
-> A computational linguistics engine that bridges deterministic NLP with structured LLM reasoning to extract phonetic structures, rhyme schemes, and deep semantic metaphors from lyrics.
+> A simple linguistic lyrics analyzer: it pairs phonetic dictionary lookups with an LLM to break down a song's rhyme scheme, sound, syntax, meaning, and pragmatics.
+
+![AI Lyric Analyzer screenshot](docs/screenshot.png)
 
 ![Streamlit App](https://img.shields.io/badge/Streamlit-App-ff4b4b?style=flat-square&logo=streamlit&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=flat-square&logo=python&logoColor=white)
@@ -12,9 +14,9 @@ Experience the live application here: **[AI Lyric Analyzer Live App](https://lyr
 ---
 
 ## About the Project
-Most automated lyric tools rely on basic sentiment counting or word clouds, missing the structural architecture that makes writing compelling. **AI Lyric Analyzer** treats lyrics with the rigorous, multi-layered attention of a literary critic. 
+Most automated lyric tools rely on basic sentiment counting or word clouds, missing the structural choices that make writing compelling. **AI Lyric Analyzer** looks at lyrics the way a close reader would: rhyme and sound, sentence structure, imagery, and what's implied but not said outright.
 
-By combining traditional phonetic parsing with structured Large Language Model outputs, this tool acts as an objective mirror to illuminate subconscious patterns, rhyme schemes, and syntactic tension in original compositions across multiple languages (including English and Russian).
+It looks up each line's end-word in the CMU Pronouncing Dictionary and converts that to IPA notation, then feeds those real phonetic transcriptions to an LLM alongside the lyrics so its rhyme-scheme and sound analysis is grounded in actual pronunciation data rather than guesswork. The phonetic lookup is English-only (CMU dictionary coverage), so analysis works best on English lyrics.
 
 ---
 
