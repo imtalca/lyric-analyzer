@@ -102,7 +102,7 @@ def extract_phonetic_data(lyrics: str) -> str:
     return phonetic_context
 
 @st.cache_data(show_spinner=False, ttl=3600, max_entries=200)
-def analyze_lyrics(lyrics: str) -> LyricAnalysis:
+def analyze_lyrics(lyrics: str) -> dict:
     lyrics = (lyrics or "").strip()
     if not lyrics:
         raise ValueError("No lyrics provided.")
@@ -141,7 +141,7 @@ def analyze_lyrics(lyrics: str) -> LyricAnalysis:
             }
         ]
     )
-    return response
+    return response.model_dump()
 
 if __name__ == "__main__":
     test_lyrics = """
@@ -187,19 +187,19 @@ Now our stems are intertwined
     analysis = analyze_lyrics(test_lyrics)
     
     print("\n--- SYNTACTIC BREAKDOWN ---")
-    print(analysis.syntactic_breakdown)
-    
+    print(analysis["syntactic_breakdown"])
+
     print("\n--- METAPHOR MAP ---")
-    print(analysis.metaphor_map)
+    print(analysis["metaphor_map"])
 
     print("\n--- PHONETIC & SONIC TEXTURE ---")
-    print(analysis.phonetic_texture)
-    
+    print(analysis["phonetic_texture"])
+
     print("\n--- NARRATIVE ARC ---")
-    print(analysis.narrative_arc)
+    print(analysis["narrative_arc"])
 
     print("\n--- RHYME SCHEME & FORM ---")
-    print(analysis.rhyme_scheme)
+    print(analysis["rhyme_scheme"])
 
     print("\n--- PRAGMATIC ANALYSIS ---")
-    print(analysis.pragmatic_analysis)
+    print(analysis["pragmatic_analysis"])

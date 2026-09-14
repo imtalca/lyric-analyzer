@@ -148,17 +148,17 @@ with col2:
             ])
 
             with tab_form:
-                st.write(analysis.rhyme_scheme)
+                st.write(analysis["rhyme_scheme"])
             with tab_sonic:
-                st.write(analysis.phonetic_texture)
+                st.write(analysis["phonetic_texture"])
             with tab_syntax:
-                st.write(analysis.syntactic_breakdown)
+                st.write(analysis["syntactic_breakdown"])
             with tab_meta:
-                st.write(analysis.metaphor_map)
+                st.write(analysis["metaphor_map"])
             with tab_prag:
-                st.write(analysis.pragmatic_analysis)
+                st.write(analysis["pragmatic_analysis"])
             with tab_arc:
-                st.write(analysis.narrative_arc)
+                st.write(analysis["narrative_arc"])
     else:
         # Default state before the user clicks the button
         st.info("Awaiting input... Paste your lyrics on the left and initialize the engine.")
