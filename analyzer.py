@@ -12,7 +12,7 @@ load_dotenv()
 
 # Cost guardrails: cap request/response size so a single call can't blow up the bill.
 MAX_LYRICS_CHARS = 6000
-MAX_OUTPUT_TOKENS = 1600
+MAX_OUTPUT_TOKENS = 2200
 
 # CMU/ARPAbet -> IPA, so end users see standard phonetic notation instead of ARPAbet codes.
 ARPABET_TO_IPA = {
@@ -72,14 +72,14 @@ client = instructor.from_openai(OpenAI(api_key=api_key))
 class LyricAnalysis(BaseModel):
     syntactic_breakdown: str = Field(
         description=(
-            "In 3-4 concise sentences: how sentence structure (enjambment vs. end-stopping, "
+            "In 5-6 concise sentences: how sentence structure (enjambment vs. end-stopping, "
             "coordination vs. subordination, ellipsis, word order) shapes pacing and tension. "
             "Quote one or two short lines as evidence. Be direct, no filler."
         )
     )
     metaphor_map: str = Field(
         description=(
-            "In 3-4 concise sentences: the core motifs and conceptual metaphors, and how concrete "
+            "In 5-6 concise sentences: the core motifs and conceptual metaphors, and how concrete "
             "imagery maps onto abstract emotional states. Quote one or two short lines as evidence. "
             "Be direct, no filler."
         )
@@ -88,13 +88,13 @@ class LyricAnalysis(BaseModel):
         description=(
             "The strict end-rhyme scheme notation for each stanza (e.g., Verse 1: AABB, Chorus: "
             "ABAB) based strictly on the provided Phonetic Data, noting any slant rhymes. Then in "
-            "1-2 sentences, explain how this form drives momentum or expectation. Cite sounds using "
+            "2-3 sentences, explain how this form drives momentum or expectation. Cite sounds using "
             "the given IPA notation (e.g., /eɪ/), never raw ARPAbet codes."
         )
     )
     phonetic_texture: str = Field(
         description=(
-            "In 3-4 concise sentences: the most notable assonance, consonance, alliteration, and "
+            "In 5-6 concise sentences: the most notable assonance, consonance, alliteration, and "
             "stress/meter patterns, and the effect they create (weight, softness, tension). Cite "
             "sounds using the given IPA notation (e.g., /eɪ/) or the words themselves, never raw "
             "ARPAbet codes. Be direct, no filler."
@@ -102,7 +102,7 @@ class LyricAnalysis(BaseModel):
     )
     pragmatic_analysis: str = Field(
         description=(
-            "In 3-4 concise sentences: who the speaker is addressing, the dominant speech act "
+            "In 5-6 concise sentences: who the speaker is addressing, the dominant speech act "
             "(assertion, question, command, confession), and what's implied but not stated "
             "outright (implicature). Note any shift in register or in the speaker/addressee "
             "relationship. Be direct, no filler."
@@ -110,7 +110,7 @@ class LyricAnalysis(BaseModel):
     )
     narrative_arc: str = Field(
         description=(
-            "In 3-4 concise sentences: the starting situation, the turning point, and the "
+            "In 5-6 concise sentences: the starting situation, the turning point, and the "
             "resolution (or lack thereof), tying back to the patterns above in brief. Be direct, "
             "no filler."
         )
