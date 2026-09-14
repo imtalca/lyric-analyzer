@@ -137,27 +137,27 @@ with col2:
                 st.error("Analysis failed. Please try again in a moment.")
                 st.stop()
 
-            # 5. Use Interactive Tabs for a clean, compact UI
-            tab_form, tab_sonic, tab_syntax, tab_meta, tab_prag, tab_arc = st.tabs([
-                "Form & Scheme",
-                "Sonic Texture",
+            # 5. Use Interactive Tabs, one per level of linguistic analysis
+            tab_form, tab_phon, tab_syntax, tab_sem, tab_prag, tab_synth = st.tabs([
+                "Form",
+                "Phonetics",
                 "Syntax",
-                "Metaphors",
+                "Semantics",
                 "Pragmatics",
-                "Narrative"
+                "Synthesis"
             ])
 
             with tab_form:
                 st.write(analysis["rhyme_scheme"])
-            with tab_sonic:
+            with tab_phon:
                 st.write(analysis["phonetic_texture"])
             with tab_syntax:
                 st.write(analysis["syntactic_breakdown"])
-            with tab_meta:
+            with tab_sem:
                 st.write(analysis["metaphor_map"])
             with tab_prag:
                 st.write(analysis["pragmatic_analysis"])
-            with tab_arc:
+            with tab_synth:
                 st.write(analysis["narrative_arc"])
     else:
         # Default state before the user clicks the button

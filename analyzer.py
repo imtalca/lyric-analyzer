@@ -12,7 +12,50 @@ load_dotenv()
 
 # Cost guardrails: cap request/response size so a single call can't blow up the bill.
 MAX_LYRICS_CHARS = 6000
-MAX_OUTPUT_TOKENS = 3200
+MAX_OUTPUT_TOKENS = 1600
+
+# CMU/ARPAbet -> IPA, so end users see standard phonetic notation instead of ARPAbet codes.
+ARPABET_TO_IPA = {
+    "AA": "ɑ", "AE": "æ", "AH": "ʌ", "AO": "ɔ", "AW": "aʊ", "AY": "aɪ",
+    "B": "b", "CH": "tʃ", "D": "d", "DH": "ð", "EH": "ɛ", "ER": "ɝ",
+    "EY": "eɪ", "F": "f", "G": "ɡ", "HH": "h", "IH": "ɪ", "IY": "i",
+    "JH": "dʒ", "K": "k", "L": "l", "M": "m", "N": "n", "NG": "ŋ",
+    "OW": "oʊ", "OY": "ɔɪ", "P": "p", "R": "ɹ", "S": "s", "SH": "ʃ",
+    "T": "t", "TH": "θ", "UH": "ʊ", "UW": "u", "V": "v", "W": "w",
+    "Y": "j", "Z": "z", "ZH": "ʒ",
+}
+
+STRESS_MARKS = {"1": "ˈ", "2": "ˌ", "0": ""}
+
+
+def arpabet_to_ipa(phones: str) -> str:
+    """Converts a space-separated ARPAbet string (e.g. 'K R EY1 Z IY0') to IPA (e.g. 'ˈkɹeɪzi').
+
+    Groups phonemes into syllables (maximal onset) so stress marks land on the
+    syllable boundary, matching standard IPA convention, rather than mid-syllable.
+    """
+    tokens = phones.split()
+    vowel_idxs = [i for i, t in enumerate(tokens) if t[-1].isdigit()]
+    if not vowel_idxs:
+        return "".join(ARPABET_TO_IPA.get(t, t) for t in tokens)
+
+    syllables = []
+    prev_end = 0
+    for vi in vowel_idxs:
+        syllables.append({"phones": tokens[prev_end:vi], "stress": tokens[vi][-1]})
+        syllables[-1]["phones"].append(tokens[vi][:-1])
+        prev_end = vi + 1
+    syllables[-1]["phones"].extend(tokens[prev_end:])  # trailing coda consonants
+
+    ipa = ""
+    for syl in syllables:
+        ipa += STRESS_MARKS.get(syl["stress"], "")
+        for p in syl["phones"]:
+            if p == "AH" and syl["stress"] == "0":
+                ipa += "ə"  # unstressed schwa, rather than the stressed ʌ
+            else:
+                ipa += ARPABET_TO_IPA.get(p, p)
+    return ipa
 
 api_key = None
 try:
@@ -29,53 +72,47 @@ client = instructor.from_openai(OpenAI(api_key=api_key))
 class LyricAnalysis(BaseModel):
     syntactic_breakdown: str = Field(
         description=(
-            "A detailed, multi-paragraph analysis of sentence structure: line breaks vs. clause "
-            "boundaries (enjambment vs. end-stopping), coordination vs. subordination, ellipsis, "
-            "word order inversions, and how each shift in syntax speeds up, slows down, or adds "
-            "tension to the delivery. Quote specific lines as evidence."
+            "In 3-4 concise sentences: how sentence structure (enjambment vs. end-stopping, "
+            "coordination vs. subordination, ellipsis, word order) shapes pacing and tension. "
+            "Quote one or two short lines as evidence. Be direct, no filler."
         )
     )
     metaphor_map: str = Field(
         description=(
-            "A detailed semantic analysis: trace the core motifs and conceptual metaphors across "
-            "the song, map the semantic fields in play (e.g., nature, decay, distance), explain "
-            "lexical connotation and polysemy where relevant, and show precisely how concrete/"
-            "physical imagery is mapped onto abstract emotional states. Quote specific lines as "
-            "evidence."
+            "In 3-4 concise sentences: the core motifs and conceptual metaphors, and how concrete "
+            "imagery maps onto abstract emotional states. Quote one or two short lines as evidence. "
+            "Be direct, no filler."
         )
     )
     rhyme_scheme: str = Field(
         description=(
             "The strict end-rhyme scheme notation for each stanza (e.g., Verse 1: AABB, Chorus: "
-            "ABAB) based strictly on the provided Phonetic Data, including any slant/near rhymes "
-            "and their phonetic distance (shared vowel vs. shared coda). Explain in detail how "
-            "this specific form drives momentum, mirrors the song's structure, and sets up or "
-            "subverts listener expectation."
+            "ABAB) based strictly on the provided Phonetic Data, noting any slant rhymes. Then in "
+            "1-2 sentences, explain how this form drives momentum or expectation. Cite sounds using "
+            "the given IPA notation (e.g., /eɪ/), never raw ARPAbet codes."
         )
     )
     phonetic_texture: str = Field(
         description=(
-            "A detailed phonetic/phonological analysis: assonance, consonance, and alliteration "
-            "patterns; vowel height/backness and how it affects the perceived weight or brightness "
-            "of a line; stress and meter (where syllables fall on strong vs. weak beats); and any "
-            "sound symbolism (e.g., plosives for abruptness, sibilants for hushed tone). Cite the "
-            "actual phonemes or words involved."
+            "In 3-4 concise sentences: the most notable assonance, consonance, alliteration, and "
+            "stress/meter patterns, and the effect they create (weight, softness, tension). Cite "
+            "sounds using the given IPA notation (e.g., /eɪ/) or the words themselves, never raw "
+            "ARPAbet codes. Be direct, no filler."
         )
     )
     pragmatic_analysis: str = Field(
         description=(
-            "A detailed pragmatic analysis: who is the implied speaker addressing (self, a lover, "
-            "the listener), what speech acts are being performed (assertion, question, command, "
-            "confession), what is implicated but not literally said (conversational implicature, "
-            "presupposition), and how register, tone, and deixis (I/you/we, here/now) shift across "
-            "the song to reposition the relationship between speaker and addressee."
+            "In 3-4 concise sentences: who the speaker is addressing, the dominant speech act "
+            "(assertion, question, command, confession), and what's implied but not stated "
+            "outright (implicature). Note any shift in register or in the speaker/addressee "
+            "relationship. Be direct, no filler."
         )
     )
     narrative_arc: str = Field(
         description=(
-            "A thorough synthesis of the song's emotional and conceptual arc: the starting "
-            "situation, the turning point, and the resolution or lack thereof, drawing explicit "
-            "connections back to the syntactic, semantic, phonetic, and pragmatic patterns above."
+            "In 3-4 concise sentences: the starting situation, the turning point, and the "
+            "resolution (or lack thereof), tying back to the patterns above in brief. Be direct, "
+            "no filler."
         )
     )
 
@@ -92,12 +129,12 @@ def extract_phonetic_data(lyrics: str) -> str:
             last_word = clean_line.split()[-1].lower()
             end_words.append(last_word)
             
-    # Get the raw phonemes for those words
-    phonetic_context = "Phonetic Data for End Words:\n"
+    # Get the phonemes for those words, converted to IPA
+    phonetic_context = "Phonetic Data for End Words (IPA):\n"
     for word in end_words:
         phones = pronouncing.phones_for_word(word)
-        phoneme_str = phones[0] if phones else "Unknown"
-        phonetic_context += f"- {word}: {phoneme_str}\n"
+        ipa = f"/{arpabet_to_ipa(phones[0])}/" if phones else "Unknown"
+        phonetic_context += f"- {word}: {ipa}\n"
         
     return phonetic_context
 
@@ -127,12 +164,14 @@ def analyze_lyrics(lyrics: str) -> dict:
                 "role": "system",
                 "content": (
                     "You are an expert computational linguist specializing in phonetics, semantics, "
-                    "and pragmatics. Analyze the provided lyrics deeply and in detail, writing "
-                    "multiple full sentences per field rather than short summaries. Use the provided "
+                    "and pragmatics. Analyze the provided lyrics precisely and concisely: every field "
+                    "should be a few direct sentences, not a full paragraph. Use the provided "
                     "Phonetic Data to accurately identify end-rhyme schemes (e.g., AABB, ABAB), slant "
-                    "rhymes, and internal assonance. Ground every claim in specific quoted words or "
-                    "lines from the lyrics, and explicitly reason at the phonetic (sound), semantic "
-                    "(meaning), and pragmatic (context/use/implicature) levels of analysis."
+                    "rhymes, and internal assonance. Ground every claim in a short quoted word or "
+                    "line, and reason at the phonetic (sound), semantic (meaning), and pragmatic "
+                    "(context/use/implicature) levels. When citing sounds, always use the IPA "
+                    "notation given in the Phonetic Data (e.g., /eɪ/) — never output raw ARPAbet "
+                    "codes like 'EY1'."
                 )
             },
             {
