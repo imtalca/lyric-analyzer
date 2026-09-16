@@ -68,7 +68,7 @@ hide_st_style = """
             header {visibility: hidden;}
             /* Gradient backdrop for the whole app */
             .stApp {
-                background: linear-gradient(135deg, #1f1147 0%, #4a2a8c 35%, #a1327a 70%, #e2683a 100%);
+                background: linear-gradient(180deg, #0a0a0a 0%, #0d1f1c 45%, #14746a 75%, #1fc7b6 100%);
                 background-attachment: fixed;
             }
             /* Below ~900px, stack the two columns instead of squeezing them
@@ -89,10 +89,16 @@ hide_st_style = """
                 background-color: rgba(15, 10, 35, 0.35);
                 border-radius: 12px;
             }
+            /* The card and tab strip had a rounded background but no inner
+               padding, so content (e.g. the "Form" tab label) sat flush
+               against the rounded corner instead of having breathing room. */
+            [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] {
+                padding: 16px;
+            }
             .stTabs [data-baseweb="tab-list"] {
                 background-color: rgba(15, 10, 35, 0.35);
                 border-radius: 8px;
-                padding: 4px;
+                padding: 4px 10px;
                 flex-wrap: wrap;
             }
             /* Long unbroken tokens (e.g. a rhyme-scheme string like AABBCCDD) would

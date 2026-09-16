@@ -284,21 +284,22 @@ def scan_meter(lyrics: str) -> list[dict]:
 
 
 def format_meter_for_display(scanned: list[dict]) -> str:
-    """One line per stanza (e.g. 'Verse 1: Iambic (8-6-8-6 syllables)'), matching the
-    rhyme scheme's per-stanza summary instead of dumping every line's raw scan."""
+    """One line per stanza (e.g. 'Verse  1: Iambic (8-6-8-6 syllables)'), matching
+    the rhyme scheme's per-stanza summary instead of dumping every line's raw scan.
+    Verse numbers are right-padded to a common width, same reasoning as
+    `format_rhyme_scheme`, so a 2-digit stanza count doesn't shift the columns."""
     stanzas: dict[int, list[dict]] = {}
     for s in scanned:
         stanzas.setdefault(s["stanza"], []).append(s)
 
+    width = len(str(max(stanzas))) if stanzas else 1
     out_lines = []
     for idx in sorted(stanzas):
         entries = stanzas[idx]
         syll_counts = "-".join(str(len(e["pattern"])) for e in entries)
         foot_types = {e["label"].split()[0] for e in entries if not e["label"].startswith("Irregular")}
-        if len(foot_types) == 1:
-            out_lines.append(f"Verse {idx}: {foot_types.pop()} ({syll_counts} syllables)")
-        else:
-            out_lines.append(f"Verse {idx}: Mixed meter ({syll_counts} syllables)")
+        label = foot_types.pop() if len(foot_types) == 1 else "Mixed meter"
+        out_lines.append(f"Verse {idx:>{width}}: {label} ({syll_counts} syllables)")
     return "\n".join(out_lines)
 
 
@@ -318,14 +319,40 @@ def _clean_end_word(line: str) -> str | None:
     return words[-1] if words else None
 
 
-def _rhyme_key(word: str):
-    """Returns (stressed_key, base_key) from the word's rhyming part, or None if unknown."""
+# Unstressed derivational prefixes: removing one doesn't change a word's own
+# stress/rhyme (e.g. "respire" rhymes on "-SPIRE" exactly like "spire" does),
+# so an OOV word can often be resolved via its un-prefixed root instead of a
+# blind spelling guess.
+_STRIPPABLE_PREFIXES = (
+    "re", "un", "dis", "non", "pre", "mis", "over", "under", "out",
+    "de", "sub", "inter", "co",
+)
+
+
+def _rhyme_key(word: str) -> tuple[str, str, str]:
+    """Returns (stressed_key, base_key, source) from the word's rhyming part.
+
+    source is "dict" for a direct CMUdict hit, "prefix" when resolved via an
+    un-prefixed root (e.g. "respire" -> "spire"), or "guess" for a last-resort
+    spelling-based fallback (the word's last 3 letters) when neither works —
+    only useful for grouping with *other* unrecognized words that happen to
+    share that ending, since a real dictionary word's key is phonetic, not
+    spelling-based, and won't collide with a spelling guess.
+    """
     phones_list = pronouncing.phones_for_word(word)
-    if not phones_list:
-        return None
-    stressed_key = pronouncing.rhyming_part(phones_list[0])
-    base_key = re.sub(r"\d", "", stressed_key)
-    return stressed_key, base_key
+    if phones_list:
+        stressed_key = pronouncing.rhyming_part(phones_list[0])
+        return stressed_key, re.sub(r"\d", "", stressed_key), "dict"
+
+    for prefix in _STRIPPABLE_PREFIXES:
+        if word.startswith(prefix) and len(word) - len(prefix) >= 3:
+            root_phones = pronouncing.phones_for_word(word[len(prefix):])
+            if root_phones:
+                stressed_key = pronouncing.rhyming_part(root_phones[0])
+                return stressed_key, re.sub(r"\d", "", stressed_key), "prefix"
+
+    fallback = word[-3:] if len(word) >= 3 else word
+    return fallback, fallback, "guess"
 
 
 def _split_stanzas(lyrics: str) -> list[list[str]]:
@@ -342,8 +369,10 @@ def _scheme_for_stanza(lines: list[str]) -> tuple[str, list[tuple[str, str]]]:
 
     Two lines get the same letter when their rhyming part matches ignoring stress
     level; if the stress level also differs (e.g. 'free' vs. 'liberty') it's a
-    slant rhyme, flagged in `notes`. Unmatched (CMUdict-missing) words get their
-    own letter and are flagged unknown, so they never silently force a false rhyme.
+    slant rhyme, flagged in `notes`. Words missing from CMUdict are resolved via
+    `_rhyme_key`'s prefix-stripping or spelling-guess fallbacks; a spelling guess
+    is always flagged 'estimated' (a prefix-derived key isn't, since it's still a
+    real dictionary pronunciation, just of the un-prefixed root).
     """
     letters = string.ascii_uppercase
     key_to_letter: dict[str, str] = {}
@@ -355,22 +384,18 @@ def _scheme_for_stanza(lines: list[str]) -> tuple[str, list[tuple[str, str]]]:
         word = _clean_end_word(line)
         if word is None:
             continue
-        info = _rhyme_key(word)
-        if info is None:
+        stressed_key, base_key, source = _rhyme_key(word)
+        if base_key in key_to_letter:
+            letter = key_to_letter[base_key]
+            if source != "guess" and stressed_key != key_to_first_stressed[base_key]:
+                notes.append((word, "slant"))
+        else:
             letter = letters[next_idx % 26]
             next_idx += 1
-            notes.append((word, "unknown"))
-        else:
-            stressed_key, base_key = info
-            if base_key in key_to_letter:
-                letter = key_to_letter[base_key]
-                if stressed_key != key_to_first_stressed[base_key]:
-                    notes.append((word, "slant"))
-            else:
-                letter = letters[next_idx % 26]
-                next_idx += 1
-                key_to_letter[base_key] = letter
-                key_to_first_stressed[base_key] = stressed_key
+            key_to_letter[base_key] = letter
+            key_to_first_stressed[base_key] = stressed_key
+        if source == "guess":
+            notes.append((word, "estimated"))
         result.append(letter)
     return "".join(result), notes
 
@@ -385,18 +410,24 @@ def compute_rhyme_scheme(lyrics: str) -> list[dict]:
 
 
 def format_rhyme_scheme(stanzas_info: list[dict]) -> str:
-    """Renders computed stanza schemes as e.g. 'Verse 1: ABAB (slant: liberty)'."""
+    """Renders computed stanza schemes as e.g. 'Verse  1: ABAB (slant: liberty)'.
+
+    Verse numbers are right-padded to a common width so the letter/note columns
+    stay aligned once a poem reaches a 2-digit stanza count (otherwise "Verse 9:"
+    and "Verse 10:" shift the text after them by one column).
+    """
+    width = len(str(len(stanzas_info))) if stanzas_info else 1
     out_lines = []
     for s in stanzas_info:
         slants = [w for w, t in s["notes"] if t == "slant"]
-        unknowns = [w for w, t in s["notes"] if t == "unknown"]
+        estimated = [w for w, t in s["notes"] if t == "estimated"]
         extras = []
         if slants:
             extras.append("slant: " + ", ".join(slants))
-        if unknowns:
-            extras.append("unknown: " + ", ".join(unknowns))
+        if estimated:
+            extras.append("estimated: " + ", ".join(estimated))
         suffix = f"  ({'; '.join(extras)})" if extras else ""
-        out_lines.append(f"Verse {s['index']}: {s['scheme']}{suffix}")
+        out_lines.append(f"Verse {s['index']:>{width}}: {s['scheme']}{suffix}")
     return "\n".join(out_lines)
 
 
