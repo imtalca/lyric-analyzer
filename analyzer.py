@@ -154,6 +154,19 @@ FOOT_COUNT_NAMES = {
 }
 
 
+def extract_words(line: str) -> list[str]:
+    """Lowercased word tokens from a line.
+
+    `string.punctuation` is ASCII-only, so lyrics using an em dash (—), en dash
+    (–), curly quotes, or an ellipsis (…) — all common in pasted lyrics — left
+    that character stuck to the adjacent word (e.g. "blood—"), which then failed
+    every dictionary lookup and got misreported as an unknown rhyme/stress.
+    Matching letter runs directly sidesteps the punctuation table entirely.
+    """
+    words = re.findall(r"[A-Za-z']+", line)
+    return [w.strip("'").lower() for w in words if w.strip("'")]
+
+
 def estimate_syllables(word: str) -> int:
     """Vowel-cluster fallback syllable count for words missing from CMUdict."""
     word = word.lower()
@@ -168,66 +181,125 @@ def estimate_syllables(word: str) -> int:
     return max(count, 1)
 
 
-def line_stress_pattern(clean_line: str) -> str:
-    """Builds a w/S stress string for a line ('?' where CMUdict has no entry)."""
-    pattern = ""
-    for word in clean_line.split():
-        wl = word.lower()
+def line_tokens(words: list[str]) -> list[tuple[str, bool]]:
+    """Per-syllable (stress_char, flexible) tokens for a line.
+
+    Real scansion doesn't just concatenate each word's citation-form stress and
+    check the result against a template — performance is allowed to flex certain
+    syllables to fit the meter. Metrical theory (the Halle-Keyser "stress maximum"
+    idea, simplified) only treats a polysyllabic word's *primary*-stressed syllable
+    and its own unstressed syllables as fixed; a secondary-stressed syllable or any
+    monosyllable can go either way. E.g. "Come Liberty, thou cheerful sound" reads
+    as perfect iambic tetrameter once "-ty" and "thou" are allowed to sit on a beat
+    even though they aren't a word's primary stress in isolation.
+    """
+    tokens = []
+    for wl in words:
         stresses = pronouncing.stresses_for_word(wl)
-        if stresses:
-            digits = stresses[0]
-            if len(digits) == 1 and wl in FUNCTION_WORDS:
-                pattern += "w"
-            else:
-                pattern += "".join("w" if d == "0" else "S" for d in digits)
-        else:
-            pattern += "?" * estimate_syllables(wl)
-    return pattern
-
-
-def _foot_match_score(pattern: str, foot: str) -> float:
-    """Fraction of known (non-'?') syllables that fit `foot` tiled across the line."""
-    known = matched = 0
-    for i, ch in enumerate(pattern):
-        if ch == "?":
+        if not stresses:
+            tokens.extend([("?", True)] * estimate_syllables(wl))
             continue
-        known += 1
-        if ch == foot[i % len(foot)]:
-            matched += 1
-    return matched / known if known else 0.0
+        digits = stresses[0]
+        if len(digits) == 1:
+            default = "w" if wl in FUNCTION_WORDS else "S"
+            tokens.append((default, True))
+        else:
+            for d in digits:
+                if d == "1":
+                    tokens.append(("S", False))
+                elif d == "0":
+                    tokens.append(("w", False))
+                else:  # secondary stress: leans strong, but negotiable
+                    tokens.append(("S", True))
+    return tokens
 
 
-def classify_meter(pattern: str) -> str:
-    """Best-fit foot type + foot count for a w/S stress pattern, or 'Irregular'."""
-    if not pattern:
-        return "N/A"
-    best_name, best_score, best_len = None, 0.0, 2
+def scan_line_meter(tokens: list[tuple[str, bool]]) -> tuple[str, str]:
+    """Best-fit (resolved_pattern, label) for a line's tokens.
+
+    A fixed (non-flexible) syllable that still clashes with the template counts as
+    a substitution (e.g. a trochaic inversion); too many make the line irregular.
+    Ties between foot types are broken by how well the literal citation-form
+    reading fits, so an all-monosyllable line still gets a sensible label instead
+    of an arbitrary one.
+
+    The returned pattern snaps every *flexible* syllable to whatever the winning
+    template calls for at that position — e.g. "thou" and the "-ty" of "Liberty"
+    display as the beat they're actually read on, not their isolated-word default
+    — while genuine substitutions (a fixed syllable that still clashes) stay
+    visible as-is, since those are real deviations worth showing.
+    """
+    if not tokens:
+        return "", "N/A"
+    n = len(tokens)
+    best = None
     for name, foot in FOOT_PATTERNS.items():
-        score = _foot_match_score(pattern, foot)
-        if score > best_score:
-            best_name, best_score, best_len = name, score, len(foot)
-    if best_score >= 0.75:
-        foot_count = max(round(len(pattern) / best_len), 1)
+        violations = naive_matches = known = 0
+        for i, (ch, flexible) in enumerate(tokens):
+            if ch == "?":
+                continue
+            known += 1
+            if ch == foot[i % len(foot)]:
+                naive_matches += 1
+            elif not flexible:
+                violations += 1
+        naive_score = naive_matches / known if known else 0.0
+        key = (-violations, naive_score)
+        if best is None or key > best[0]:
+            best = (key, name, foot, violations)
+    _, name, foot, violations = best
+    foot_len = len(foot)
+
+    resolved = "".join(
+        "?" if ch == "?" else (foot[i % foot_len] if flexible else ch)
+        for i, (ch, flexible) in enumerate(tokens)
+    )
+
+    tolerance = max(1, n // 8)
+    if violations <= tolerance:
+        foot_count = max(round(n / foot_len), 1)
         foot_label = FOOT_COUNT_NAMES.get(foot_count, f"{foot_count}-foot")
-        return f"{best_name} {foot_label}"
-    return f"Irregular ({len(pattern)} syllables)"
+        sub_note = f", {violations} substitution{'s' if violations != 1 else ''}" if violations else ""
+        label = f"{name} {foot_label}{sub_note}"
+    else:
+        label = f"Irregular ({n} syllables, {violations} stress clashes)"
+    return resolved, label
 
 
 def scan_meter(lyrics: str) -> list[dict]:
     """Scans every non-empty line's stress pattern and meter label from CMUdict."""
     scanned = []
-    for line in lyrics.strip().split("\n"):
-        clean_line = line.translate(str.maketrans("", "", string.punctuation)).strip()
-        if not clean_line:
-            continue
-        pattern = line_stress_pattern(clean_line)
-        scanned.append({"line": clean_line, "pattern": pattern, "label": classify_meter(pattern)})
+    for stanza_idx, lines in enumerate(_split_stanzas(lyrics), start=1):
+        for line in lines:
+            words = extract_words(line)
+            if not words:
+                continue
+            tokens = line_tokens(words)
+            pattern, label = scan_line_meter(tokens)
+            scanned.append({
+                "stanza": stanza_idx, "line": line.strip(),
+                "pattern": pattern, "label": label,
+            })
     return scanned
 
 
 def format_meter_for_display(scanned: list[dict]) -> str:
-    """Clean bullet list of the scan, for direct display in the UI (no LLM involved)."""
-    return "\n".join(f'"{s["line"]}" — {s["pattern"]} ({s["label"]})' for s in scanned)
+    """One line per stanza (e.g. 'Verse 1: Iambic (8-6-8-6 syllables)'), matching the
+    rhyme scheme's per-stanza summary instead of dumping every line's raw scan."""
+    stanzas: dict[int, list[dict]] = {}
+    for s in scanned:
+        stanzas.setdefault(s["stanza"], []).append(s)
+
+    out_lines = []
+    for idx in sorted(stanzas):
+        entries = stanzas[idx]
+        syll_counts = "-".join(str(len(e["pattern"])) for e in entries)
+        foot_types = {e["label"].split()[0] for e in entries if not e["label"].startswith("Irregular")}
+        if len(foot_types) == 1:
+            out_lines.append(f"Verse {idx}: {foot_types.pop()} ({syll_counts} syllables)")
+        else:
+            out_lines.append(f"Verse {idx}: Mixed meter ({syll_counts} syllables)")
+    return "\n".join(out_lines)
 
 
 def format_meter_for_llm(scanned: list[dict]) -> str:
@@ -242,8 +314,8 @@ def format_meter_for_llm(scanned: list[dict]) -> str:
 
 
 def _clean_end_word(line: str) -> str | None:
-    clean_line = line.translate(str.maketrans("", "", string.punctuation)).strip()
-    return clean_line.split()[-1].lower() if clean_line else None
+    words = extract_words(line)
+    return words[-1] if words else None
 
 
 def _rhyme_key(word: str):
@@ -335,10 +407,9 @@ def extract_phonetic_data(lyrics: str) -> str:
     
     # Isolate the last word of every line
     for line in lines:
-        clean_line = line.translate(str.maketrans('', '', string.punctuation)).strip()
-        if clean_line:
-            last_word = clean_line.split()[-1].lower()
-            end_words.append(last_word)
+        words = extract_words(line)
+        if words:
+            end_words.append(words[-1])
             
     # Get the phonemes for those words, converted to IPA
     phonetic_context = "Phonetic Data for End Words (IPA):\n"
