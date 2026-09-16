@@ -176,7 +176,13 @@ with col2:
             ])
 
             with tab_form:
+                st.markdown("**Rhyme Scheme**")
+                st.code(analysis["rhyme_scheme_notation"], language=None)
                 st.write(analysis["rhyme_scheme"])
+                st.divider()
+                st.markdown("**Meter**")
+                st.code(analysis["meter_scan"], language=None)
+                st.write(analysis["meter_analysis"])
             with tab_phon:
                 st.write(analysis["phonetic_texture"])
             with tab_syntax:
