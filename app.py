@@ -91,14 +91,17 @@ hide_st_style = """
             }
             /* The card and tab strip had a rounded background but no inner
                padding, so content (e.g. the "Form" tab label) sat flush
-               against the rounded corner instead of having breathing room. */
-            [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] {
-                padding: 16px;
+               against the rounded corner instead of having breathing room.
+               Targeted directly + !important since a plain descendant rule
+               here was losing to Streamlit's own styles. */
+            [data-testid="stVerticalBlockBorderWrapper"] {
+                padding: 16px !important;
             }
             .stTabs [data-baseweb="tab-list"] {
                 background-color: rgba(15, 10, 35, 0.35);
                 border-radius: 8px;
-                padding: 4px 10px;
+                padding: 8px 20px !important;
+                margin-left: 4px;
                 flex-wrap: wrap;
             }
             /* Long unbroken tokens (e.g. a rhyme-scheme string like AABBCCDD) would
